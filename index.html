@@ -7,6 +7,13 @@ Your browser does not support the HTML5 canvas tag.</canvas>
 
 <div id="score">Score: 0</div>
 
+<!-- Dodajemy pole do wprowadzania czasu gry i przycisk do jego ustawienia -->
+<div>
+    <label for="timerInput">Czas gry (minuty):</label>
+    <input id="timerInput" type="number" min="1">
+    <button id="startButton">Start</button>
+</div>
+
 <script>
 
 // Inicjacja gry
@@ -102,13 +109,32 @@ function drawGame() {
 }
 
 // Aktualizacja gry
+var gameIsActive = false;
+var animationId;
 function updateGame() {
-    drawGame();
-    requestAnimationFrame(updateGame);
+    if (gameIsActive) {
+        drawGame();
+        animationId = requestAnimationFrame(updateGame);
+    } else {
+        cancelAnimationFrame(animationId); // Zatrzymuje aktualizację gry
+    }
 }
 
-// Start gry
-updateGame();
+// Minutnik
+var timer;
+var startButton = document.getElementById('startButton');
+startButton.addEventListener('click', function() {
+    var timeInput = document.getElementById('timerInput');
+    var time = parseInt(timeInput.value);
+    if (!isNaN(time) && time > 0) {
+        gameIsActive = true;
+        updateGame(); // Start gry
+        timer = setTimeout(function() {
+            gameIsActive = false; // Zakończenie gry po upłynięciu czasu
+            alert('Koniec czasu! Twój wynik to ' + score);
+        }, time * 60 * 1000); // Czas jest podany w minutach, więc musimy przeliczyć go na milisekundy
+    }
+});
 
 </script>
 
