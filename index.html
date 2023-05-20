@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<canvas id="gameCanvas" width="800" height="600" style="border:1px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.</canvas>
+
+<div id="score">Score: 0</div>
+
+<script>
+
+// Inicjacja gry
+var canvas = document.getElementById('gameCanvas');
+var ctx = canvas.getContext('2d');
+
+// Definicja gracza
+var player = {
+    x: 50,
+    y: 50,
+    size: 20,
+};
+
+// Definicja punktacji
+var score = 0;
+
+// Definicja mapy
+var map = [];
+for(var i = 0; i < 40; i++) {
+    map[i] = [];
+    for(var j = 0; j < 30; j++) {
+        map[i][j] = 0;
+    }
+}
+
+// Liczba niebieskich kwadratów
+var blueSquareCount = 0;
+
+// Funkcja dodająca losowe niebieskie kwadraty
+function addBlueSquares() {
+    blueSquareCount = 10;
+    for(var i = 0; i < blueSquareCount; i++) {
+        var randX = Math.floor(Math.random() * 40);
+        var randY = Math.floor(Math.random() * 30);
+        map[randX][randY] = 2; // 2 reprezentuje niebieski kwadrat
+    }
+}
+
+addBlueSquares();
+
+// Sterowanie
+window.addEventListener('keydown', function(e) {
+    var key = e.keyCode;
+    if(key === 37 && player.x >= 10) player.x -= 10; // Lewo
+    if(key === 38 && player.y >= 10) player.y -= 10; // Góra
+    if(key === 39 && player.x < canvas.width - player.size) player.x += 10; // Prawo
+    if(key === 40 && player.y < canvas.height - player.size) player.y += 10; // Dół
+    if(key === 32) { // Spacja, umieszczanie bloku
+        var gridX = Math.floor(player.x / 20);
+        var gridY = Math.floor(player.y / 20);
+        if(gridX >= 0 && gridX < 40 && gridY >= 0 && gridY < 30) {
+            map[gridX][gridY] = 1;
+        }
+    }
+});
+
+// Rysowanie gry
+function drawGame() {
+    // Czyszczenie ekranu
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Rysowanie mapy
+    for(var i = 0; i < 40; i++) {
+        for(var j = 0; j < 30; j++) {
+            if(map[i][j] === 1) {
+                ctx.fillStyle = "#000000";
+                ctx.fillRect(i * 20, j * 20, 20, 20);
+            } else if(map[i][j] === 2) {
+                ctx.fillStyle = "#0000FF";
+                ctx.fillRect(i * 20, j * 20, 20, 20);
+            }
+        }
+    }
+
+    // Rysowanie gracza
+    ctx.fillStyle = "#FF0000";
+    ctx.fillRect(player.x, player.y, player.size, player.size);
+
+    // Sprawdzanie, czy gracz zebrał niebieski kwadrat
+    var gridX = Math.floor(player.x / 20);
+    var gridY = Math.floor(player.y / 20);
+    if(map[gridX][gridY] === 2) {
+        map[gridX][gridY] = 0; // Usuń niebieski kwadrat
+        score++; // Zwiększ punktację
+        blueSquareCount--; // Zmniejsz liczbę niebieskich kwadratów
+        document.getElementById('score').innerText = "Score: " + score; // Wyświetl punktację
+
+        // Jeśli wszystkie niebieskie kwadraty zostały zebrane, dodaj nowe
+        if(blueSquareCount === 0) {
+            addBlueSquares();
+        }
+    }
+}
+
+// Aktualizacja gry
+function updateGame() {
+    drawGame();
+    requestAnimationFrame(updateGame);
+}
+
+// Start gry
+updateGame();
+
+</script>
+
+</body>
+</html>
