@@ -185,7 +185,55 @@ setInterval(function() {
         }
     }
 }, 1000);
-</script>
+// Rozpoczęcie gry
+document.getElementById('startButton').addEventListener('click', function() {
+    isTimedGame = true;
+    gameTime = document.getElementById('timerInput').value * 60; // Konwersja na sekundy
+    gameIsActive = true;
+    updateGame();
+});
 
+document.getElementById('startButtonNoTimer').addEventListener('click', function() {
+    isTimedGame = false;
+    gameIsActive = true;
+    updateGame();
+});
+
+// Obsługa minutnika gry
+setInterval(function() {
+    if(isTimedGame && gameTime > 0) {
+        gameTime--;
+        if(gameTime === 0) {
+            gameIsActive = false;
+            // Zakończenie gry, wysyłanie najwyższego wyniku do serwera
+            fetch('http://localhost:3000/highscore', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ score: score }),
+            }).then(response => response.json())
+              .then(data => {
+                  document.getElementById('highScore').innerText = "High Score: " + data.score;
+                  document.getElementById('highScoreTime').innerText = "High Score Time: " + new Date(data.time).toLocaleString();
+              });
+        }
+    }
+}, 1000);
+
+// Funkcja do aktualizacji wyniku
+function updateHighScore() {
+    fetch('http://localhost:3000/highscore')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('highScore').innerText = "High Score: " + data.score;
+            document.getElementById('highScoreTime').innerText = "High Score Time: " + new Date(data.time).toLocaleString();
+        });
+}
+
+// Odświeżanie wyniku co 2 sekundy
+setInterval(updateHighScore, 2000);
+
+</script>
 </body>
 </html>
