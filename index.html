@@ -6,45 +6,54 @@
 Your browser does not support the HTML5 canvas tag.</canvas>
 
 <div id="score">Score: 0</div>
+<div id="highScore">High Score: 0</div>
+<div id="highScoreTime">High Score Time: 0</div>
 
-<!-- Dodajemy pole do wprowadzania czasu gry i przycisk do jego ustawienia -->
 <div>
     <label for="timerInput">Czas gry (minuty):</label>
     <input id="timerInput" type="number" min="1">
-    <button id="startButton">Start</button>
+    <button id="startButton">Start z minutnikiem</button>
+    <button id="startButtonNoTimer">Start bez minutnika</button>
 </div>
 
 <script>
-
 // Inicjacja gry
 var canvas = document.getElementById('gameCanvas');
 var ctx = canvas.getContext('2d');
 
 // Definicja gracza
-var player = {
-    x: 50,
-    y: 50,
-    size: 20,
-};
+var player;
 
 // Definicja punktacji
-var score = 0;
+var score;
 
 // Definicja mapy
-var map = [];
-for(var i = 0; i < 40; i++) {
-    map[i] = [];
-    for(var j = 0; j < 30; j++) {
-        map[i][j] = 0;
-    }
-}
+var map;
 
 // Liczba niebieskich kwadratów
-var blueSquareCount = 0;
+var blueSquareCount;
+
+// Czy gra jest na czas
+var isTimedGame = false;
+
+// Czas gry
+var gameTime;
+
+// Szybkość gracza
+var playerSpeed;
+var defaultPlayerSpeed = 10;
+
+// Najwyższy wynik i czas, w którym został uzyskany
+fetch('http://localhost:3000/highscore')
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('highScore').innerText = "High Score: " + data.score;
+        document.getElementById('highScoreTime').innerText = "High Score Time: " + new Date(data.time).toLocaleString();
+    });
 
 // Funkcja dodająca losowe niebieskie kwadraty
 function addBlueSquares() {
-    blueSquareCount = 10;
+    blueSquareCount = Math.floor(Math.random() * 10) + 1; // 1 do 10
     for(var i = 0; i < blueSquareCount; i++) {
         var randX = Math.floor(Math.random() * 40);
         var randY = Math.floor(Math.random() * 30);
@@ -52,21 +61,41 @@ function addBlueSquares() {
     }
 }
 
-addBlueSquares();
+// Inicjalizacja gry
+function initGame() {
+    player = {
+        x: 50,
+        y: 50,
+        size: 20,
+    };
+    
+    score = 0;
+    document.getElementById('score').innerText = "Score: " + score;
+
+    map = [];
+    for(var i = 0; i < 40; i++) {
+        map[i] = [];
+        for(var j = 0; j < 30; j++) {
+            map[i][j] = 0;
+        }
+    }
+
+    addBlueSquares();
+
+    playerSpeed = defaultPlayerSpeed;
+}
+
+initGame();
 
 // Sterowanie
 window.addEventListener('keydown', function(e) {
     var key = e.keyCode;
-    if(key === 37 && player.x >= 10) player.x -= 10; // Lewo
-    if(key === 38 && player.y >= 10) player.y -= 10; // Góra
-    if(key === 39 && player.x < canvas.width - player.size) player.x += 10; // Prawo
-    if(key === 40 && player.y < canvas.height - player.size) player.y += 10; // Dół
+    if(key === 37 && player.x >= playerSpeed) player.x -= playerSpeed; // Lewo
+    if(key === 38 && player.y >= playerSpeed) player.y -= playerSpeed; // Góra
+    if(key === 39 && player.x < canvas.width - player.size) player.x += playerSpeed; // Prawo
+    if(key === 40 && player.y < canvas.height - player.size) player.y += playerSpeed; // Dół
     if(key === 32) { // Spacja, umieszczanie bloku
-        var gridX = Math.floor(player.x / 20);
-        var gridY = Math.floor(player.y / 20);
-        if(gridX >= 0 && gridX < 40 && gridY >= 0 && gridY < 30) {
-            map[gridX][gridY] = 1;
-        }
+        e.preventDefault(); // Zapobiegaj domyślnej akcji spacji
     }
 });
 
@@ -83,6 +112,9 @@ function drawGame() {
                 ctx.fillRect(i * 20, j * 20, 20, 20);
             } else if(map[i][j] === 2) {
                 ctx.fillStyle = "#0000FF";
+                ctx.fillRect(i * 20, j * 20, 20, 20);
+            } else if(map[i][j] === 3) {
+                ctx.fillStyle = "#00FF00";
                 ctx.fillRect(i * 20, j * 20, 20, 20);
             }
         }
@@ -106,6 +138,15 @@ function drawGame() {
             addBlueSquares();
         }
     }
+
+    // Sprawdzanie, czy gracz zebrał zielony kwadrat
+    if(map[gridX][gridY] === 3) {
+        map[gridX][gridY] = 0; // Usuń zielony kwadrat
+        playerSpeed += 5; // Zwiększ prędkość gracza
+        setTimeout(function() {
+            playerSpeed = defaultPlayerSpeed; // Resetuj prędkość gracza po 10 sekundach
+        }, 10000);
+    }
 }
 
 // Aktualizacja gry
@@ -116,26 +157,34 @@ function updateGame() {
         drawGame();
         animationId = requestAnimationFrame(updateGame);
     } else {
-        cancelAnimationFrame(animationId); // Zatrzymuje aktualizację gry
+        cancelAnimationFrame(animationId); // Zatrzymaj animację, gdy gra nie jest aktywna
     }
 }
 
-// Minutnik
-var timer;
-var startButton = document.getElementById('startButton');
-startButton.addEventListener('click', function() {
-    var timeInput = document.getElementById('timerInput');
-    var time = parseInt(timeInput.value);
-    if (!isNaN(time) && time > 0) {
-        gameIsActive = true;
-        updateGame(); // Start gry
-        timer = setTimeout(function() {
-            gameIsActive = false; // Zakończenie gry po upłynięciu czasu
-            alert('Koniec czasu! Twój wynik to ' + score);
-        }, time * 60 * 1000); // Czas jest podany w minutach, więc musimy przeliczyć go na milisekundy
-    }
+// Rozpoczęcie gry
+document.getElementById('startButton').addEventListener('click', function() {
+    isTimedGame = true;
+    gameTime = document.getElementById('timerInput').value * 60; // Konwersja na sekundy
+    gameIsActive = true;
+    updateGame();
 });
 
+document.getElementById('startButtonNoTimer').addEventListener('click', function() {
+    isTimedGame = false;
+    gameIsActive = true;
+    updateGame();
+});
+
+// Obsługa minutnika gry
+setInterval(function() {
+    if(isTimedGame && gameTime > 0) {
+        gameTime--;
+        if(gameTime === 0) {
+            gameIsActive = false;
+            // Tu można dodać logikę zakończenia gry
+        }
+    }
+}, 1000);
 </script>
 
 </body>
