@@ -1,239 +1,263 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <style>
+    #timerDisplay {
+        position: fixed;
+        right: 50px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 2em;
+        border: 1px solid #d3d3d3;
+        padding: 10px;
+        background-color: #fff;
+    }
+    </style>
+</head>
 <body>
+    <canvas id="gameCanvas" width="800" height="600" style="border:1px solid #d3d3d3;" tabindex="-1">
+        Your browser does not support the HTML5 canvas tag.</canvas>
+    <div id="score" tabindex="-1">Wynik: 0</div>
+    <div id="highScore" tabindex="-1">Najlepszy Wynik: 0</div>
+    <div id="highScoreTime" tabindex="-1">Czas Najlepszego Wyniku: 0</div>
+    <div id="tury" tabindex="-1">Tury: 0</div>
+    <div id="timerDisplay" tabindex="-1">Pozostały czas: 00:00</div> <!-- Nowy element do wyświetlania czasu -->
+    <div>
+        <label for="timerInput" tabindex="-1">Czas gry (minuty):</label>
+        <input id="timerInput" type="number" min="1" tabindex="-1">
+        <button id="startButton" tabindex="-1">Start</button>
+        <button id="resetButton" tabindex="-1">Resetuj Najlepszy Wynik</button>
+    </div>
 
-<canvas id="gameCanvas" width="800" height="600" style="border:1px solid #d3d3d3;">
-Your browser does not support the HTML5 canvas tag.</canvas>
+    <script>
+        var canvas = document.getElementById('gameCanvas');
+        var ctx = canvas.getContext('2d');
 
-<div id="score">Score: 0</div>
-<div id="highScore">High Score: 0</div>
-<div id="highScoreTime">High Score Time: 0</div>
+        // Definicja gracza
+        var player = {
+            x: 50,
+            y: 50,
+            size: 20,
+            speed: 3
+        };
 
-<div>
-    <label for="timerInput">Czas gry (minuty):</label>
-    <input id="timerInput" type="number" min="1">
-    <button id="startButton">Start z minutnikiem</button>
-    <button id="startButtonNoTimer">Start bez minutnika</button>
-</div>
-
-<script>
-// Inicjacja gry
-var canvas = document.getElementById('gameCanvas');
-var ctx = canvas.getContext('2d');
-
-// Definicja gracza
-var player;
-
-// Definicja punktacji
-var score;
-
-// Definicja mapy
-var map;
-
-// Liczba niebieskich kwadratów
-var blueSquareCount;
-
-// Czy gra jest na czas
-var isTimedGame = false;
-
-// Czas gry
-var gameTime;
-
-// Szybkość gracza
-var playerSpeed;
-var defaultPlayerSpeed = 10;
-
-// Najwyższy wynik i czas, w którym został uzyskany
-fetch('http://localhost:3000/highscore')
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('highScore').innerText = "High Score: " + data.score;
-        document.getElementById('highScoreTime').innerText = "High Score Time: " + new Date(data.time).toLocaleString();
-    });
-
-// Funkcja dodająca losowe niebieskie kwadraty
-function addBlueSquares() {
-    blueSquareCount = Math.floor(Math.random() * 10) + 1; // 1 do 10
-    for(var i = 0; i < blueSquareCount; i++) {
-        var randX = Math.floor(Math.random() * 40);
-        var randY = Math.floor(Math.random() * 30);
-        map[randX][randY] = 2; // 2 reprezentuje niebieski kwadrat
-    }
-}
-
-// Inicjalizacja gry
-function initGame() {
-    player = {
-        x: 50,
-        y: 50,
-        size: 20,
-    };
-    
-    score = 0;
-    document.getElementById('score').innerText = "Score: " + score;
-
-    map = [];
-    for(var i = 0; i < 40; i++) {
-        map[i] = [];
-        for(var j = 0; j < 30; j++) {
-            map[i][j] = 0;
-        }
-    }
-
-    addBlueSquares();
-
-    playerSpeed = defaultPlayerSpeed;
-}
-
-initGame();
-
-// Sterowanie
-window.addEventListener('keydown', function(e) {
-    var key = e.keyCode;
-    if(key === 37 && player.x >= playerSpeed) player.x -= playerSpeed; // Lewo
-    if(key === 38 && player.y >= playerSpeed) player.y -= playerSpeed; // Góra
-    if(key === 39 && player.x < canvas.width - player.size) player.x += playerSpeed; // Prawo
-    if(key === 40 && player.y < canvas.height - player.size) player.y += playerSpeed; // Dół
-    if(key === 32) { // Spacja, umieszczanie bloku
-        e.preventDefault(); // Zapobiegaj domyślnej akcji spacji
-    }
-});
-
-// Rysowanie gry
-function drawGame() {
-    // Czyszczenie ekranu
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Rysowanie mapy
-    for(var i = 0; i < 40; i++) {
-        for(var j = 0; j < 30; j++) {
-            if(map[i][j] === 1) {
-                ctx.fillStyle = "#000000";
-                ctx.fillRect(i * 20, j * 20, 20, 20);
-            } else if(map[i][j] === 2) {
-                ctx.fillStyle = "#0000FF";
-                ctx.fillRect(i * 20, j * 20, 20, 20);
-            } else if(map[i][j] === 3) {
-                ctx.fillStyle = "#00FF00";
-                ctx.fillRect(i * 20, j * 20, 20, 20);
+        var score = 0;
+        var turns = 0;
+        var map = [];
+        for (var i = 0; i < 40; i++) {
+            map[i] = [];
+            for (var j = 0; j < 30; j++) {
+                map[i][j] = 0;
             }
         }
-    }
 
-    // Rysowanie gracza
-    ctx.fillStyle = "#FF0000";
-    ctx.fillRect(player.x, player.y, player.size, player.size);
+        var blueSquareCount = 0;
+        var greenSquareCount = 0;
 
-    // Sprawdzanie, czy gracz zebrał niebieski kwadrat
-    var gridX = Math.floor(player.x / 20);
-    var gridY = Math.floor(player.y / 20);
-    if(map[gridX][gridY] === 2) {
-        map[gridX][gridY] = 0; // Usuń niebieski kwadrat
-        score++; // Zwiększ punktację
-        blueSquareCount--; // Zmniejsz liczbę niebieskich kwadratów
-        document.getElementById('score').innerText = "Score: " + score; // Wyświetl punktację
-
-        // Jeśli wszystkie niebieskie kwadraty zostały zebrane, dodaj nowe
-        if(blueSquareCount === 0) {
-            addBlueSquares();
+        function addBlueSquares() {
+            blueSquareCount = 15;
+            var availableSquares = [];
+            for (var i = 0; i < 40; i++) {
+                for (var j = 0; j < 30; j++) {
+                    if (map[i][j] === 0) {
+                        availableSquares.push({ x: i, y: j });
+                    }
+                }
+            }
+            shuffleArray(availableSquares);
+            for (var i = 0; i < blueSquareCount; i++) {
+                var square = availableSquares[i];
+                map[square.x][square.y] = 2;
+            }
         }
-    }
 
-    // Sprawdzanie, czy gracz zebrał zielony kwadrat
-    if(map[gridX][gridY] === 3) {
-        map[gridX][gridY] = 0; // Usuń zielony kwadrat
-        playerSpeed += 5; // Zwiększ prędkość gracza
-        setTimeout(function() {
-            playerSpeed = defaultPlayerSpeed; // Resetuj prędkość gracza po 10 sekundach
-        }, 10000);
-    }
-}
-
-// Aktualizacja gry
-var gameIsActive = false;
-var animationId;
-function updateGame() {
-    if (gameIsActive) {
-        drawGame();
-        animationId = requestAnimationFrame(updateGame);
-    } else {
-        cancelAnimationFrame(animationId); // Zatrzymaj animację, gdy gra nie jest aktywna
-    }
-}
-
-// Rozpoczęcie gry
-document.getElementById('startButton').addEventListener('click', function() {
-    isTimedGame = true;
-    gameTime = document.getElementById('timerInput').value * 60; // Konwersja na sekundy
-    gameIsActive = true;
-    updateGame();
-});
-
-document.getElementById('startButtonNoTimer').addEventListener('click', function() {
-    isTimedGame = false;
-    gameIsActive = true;
-    updateGame();
-});
-
-// Obsługa minutnika gry
-setInterval(function() {
-    if(isTimedGame && gameTime > 0) {
-        gameTime--;
-        if(gameTime === 0) {
-            gameIsActive = false;
-            // Tu można dodać logikę zakończenia gry
+        function addGreenSquares() {
+            greenSquareCount = 5;
+            var availableSquares = [];
+            for (var i = 0; i < 40; i++) {
+                for (var j = 0; j < 30; j++) {
+                    if (map[i][j] === 0) {
+                        availableSquares.push({ x: i, y: j });
+                    }
+                }
+            }
+            shuffleArray(availableSquares);
+            for (var i = 0; i < greenSquareCount; i++) {
+                var square = availableSquares[i];
+                map[square.x][square.y] = 3;
+            }
         }
-    }
-}, 1000);
-// Rozpoczęcie gry
-document.getElementById('startButton').addEventListener('click', function() {
-    isTimedGame = true;
-    gameTime = document.getElementById('timerInput').value * 60; // Konwersja na sekundy
-    gameIsActive = true;
-    updateGame();
-});
 
-document.getElementById('startButtonNoTimer').addEventListener('click', function() {
-    isTimedGame = false;
-    gameIsActive = true;
-    updateGame();
-});
-
-// Obsługa minutnika gry
-setInterval(function() {
-    if(isTimedGame && gameTime > 0) {
-        gameTime--;
-        if(gameTime === 0) {
-            gameIsActive = false;
-            // Zakończenie gry, wysyłanie najwyższego wyniku do serwera
-            fetch('http://localhost:3000/highscore', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ score: score }),
-            }).then(response => response.json())
-              .then(data => {
-                  document.getElementById('highScore').innerText = "High Score: " + data.score;
-                  document.getElementById('highScoreTime').innerText = "High Score Time: " + new Date(data.time).toLocaleString();
-              });
+        function shuffleArray(array) {
+            for (var i = array.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
         }
-    }
-}, 1000);
 
-// Funkcja do aktualizacji wyniku
-function updateHighScore() {
-    fetch('http://localhost:3000/highscore')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('highScore').innerText = "High Score: " + data.score;
-            document.getElementById('highScoreTime').innerText = "High Score Time: " + new Date(data.time).toLocaleString();
+        addBlueSquares();
+        addGreenSquares();
+
+        // Sterowanie
+        var keyState = {};
+        window.addEventListener('keydown', function (e) {
+            keyState[e.keyCode || e.which] = true;
+        }, true);
+        window.addEventListener('keyup', function (e) {
+            keyState[e.keyCode || e.which] = false;
+        }, true);
+
+        function playerControl() {
+            if (keyState[37] && player.x - player.speed >= 0) {
+                player.x -= player.speed;
+            }
+            if (keyState[38] && player.y - player.speed >= 0) {
+                player.y -= player.speed;
+            }
+            if (keyState[39] && player.x + player.speed < canvas.width) {
+                player.x += player.speed;
+            }
+            if (keyState[40] && player.y + player.speed < canvas.height) {
+                player.y += player.speed;
+            }
+        }
+
+        // Aktualizacja gry
+        var gameIsActive = false;
+        var animationId;
+
+        function updateGame() {
+            if (gameIsActive) {
+                playerControl();  // Dodajemy kontrolę gracza
+                drawGame();
+                animationId = requestAnimationFrame(updateGame);
+            } else {
+                cancelAnimationFrame(animationId); // Zatrzymuje aktualizację gry
+            }
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (var i = 0; i < 40; i++) {
+                for (var j = 0; j < 30; j++) {
+                    if (map[i][j] === 1) {
+                        ctx.fillStyle = "#000000";
+                        ctx.fillRect(i * 20, j * 20, 20, 20);
+                    } else if (map[i][j] === 2) {
+                        ctx.fillStyle = "#0000FF";
+                        ctx.fillRect(i * 20, j * 20, 20, 20);
+                    } else if (map[i][j] === 3) {
+                        ctx.fillStyle = "#00FF00";
+                        ctx.fillRect(i * 20, j * 20, 20, 20);
+                    }
+                }
+            }
+
+            ctx.fillStyle = "#FF0000";
+            ctx.fillRect(player.x, player.y, player.size, player.size);
+
+            // Checking if the player has collected the blue square
+            var gridX1 = Math.min(Math.floor(player.x / 20), 39);
+            var gridY1 = Math.min(Math.floor(player.y / 20), 29);
+            var gridX2 = Math.min(Math.floor((player.x + player.size) / 20), 39);
+            var gridY2 = Math.min(Math.floor((player.y + player.size) / 20), 29);
+
+            if (map[gridX1][gridY1] === 2 || map[gridX2][gridY1] === 2 || map[gridX1][gridY2] === 2 || map[gridX2][gridY2] === 2) {
+                if (map[gridX1][gridY1] === 2) map[gridX1][gridY1] = 0; // Remove blue square
+                if (map[gridX2][gridY1] === 2) map[gridX2][gridY1] = 0; // Remove blue square
+                if (map[gridX1][gridY2] === 2) map[gridX1][gridY2] = 0; // Remove blue square
+                if (map[gridX2][gridY2] === 2) map[gridX2][gridY2] = 0; // Remove blue square
+                score++; // Increase score
+                blueSquareCount--; // Decrease the number of blue squares
+                document.getElementById('score').innerText = "Wynik: " + score; // Display the score
+            }
+
+            // Checking if the player has collected the green square
+            if (map[gridX1][gridY1] === 3 || map[gridX2][gridY1] === 3 || map[gridX1][gridY2] === 3 || map[gridX2][gridY2] === 3) {
+                if (map[gridX1][gridY1] === 3) map[gridX1][gridY1] = 0; // Remove green square
+                if (map[gridX2][gridY1] === 3) map[gridX2][gridY1] = 0; // Remove green square
+                if (map[gridX1][gridY2] === 3) map[gridX1][gridY2] = 0; // Remove green square
+                if (map[gridX2][gridY2] === 3) map[gridX2][gridY2] = 0; // Remove green square
+                player.speed = 5; // Increase player speed after collecting the green square
+                setTimeout(function () {
+                    if (gameIsActive) { // Check if the game is still active
+                        player.speed = 3; // Return to normal speed after 5 seconds
+                    }
+                }, 5000); // Duration of the speed boost
+                greenSquareCount--; // Decrease the number of green squares
+            }
+
+            if (blueSquareCount === 0 && greenSquareCount === 0) {
+                turns++;
+                document.getElementById('tury').innerText = "Tury: " + turns;
+                addBlueSquares();
+                addGreenSquares();
+            }
+        }
+
+        var timer;
+        var countdown;  // Nowa zmienna do odliczania
+        var startButton = document.getElementById('startButton');
+        startButton.addEventListener('click', function () {
+            var timeInput = document.getElementById('timerInput');
+            var time = parseInt(timeInput.value);
+            if (!isNaN(time) && time > 0 && !gameIsActive) { // Dodane sprawdzenie, czy gra nie jest już uruchomiona
+                gameIsActive = true; // Ustawienie stanu gry na aktywny
+                score = 0;
+                turns = 0;
+                player.speed = 3; // reset player's speed
+                keyState = {};  // reset key state
+                updateGame();
+                timer = setTimeout(function () {
+                    gameIsActive = false;
+                    clearInterval(countdown);  // Koniec odliczania
+                    alert('Koniec czasu! Twój wynik to ' + score + ', liczba tur: ' + turns);
+                    if (score > localStorage.getItem('highScore')) {
+                        localStorage.setItem('highScore', score);
+                        localStorage.setItem('highScoreTime', time);
+                        document.getElementById('highScore').innerText = "Najlepszy Wynik: " + localStorage.getItem('highScore');
+                        document.getElementById('highScoreTime').innerText = "Czas Najlepszego Wyniku: " + localStorage.getItem('highScoreTime');
+                    }
+                }, time * 60 * 1000);
+
+                // Zacznij odliczać
+                var remainingTime = time * 60;
+                countdown = setInterval(function () {
+                    remainingTime--;
+                    var minutes = Math.floor(remainingTime / 60);
+                    var seconds = remainingTime % 60;
+                    document.getElementById('timerDisplay').innerText = 'Pozostały czas: ' + pad(minutes, 2) + ':' + pad(seconds, 2);
+                }, 1000);
+            }
         });
-}
 
-// Odświeżanie wyniku co 2 sekundy
-setInterval(updateHighScore, 2000);
+        function pad(num, size) {
+            var s = num + "";
+            while (s.length < size) s = "0" + s;
+            return s;
+        }
 
-</script>
+        var resetButton = document.getElementById('resetButton');
+        resetButton.addEventListener('click', function () {
+            localStorage.removeItem('highScore');
+            localStorage.removeItem('highScoreTime');
+            document.getElementById('highScore').innerText = "Najlepszy Wynik: 0";
+            document.getElementById('highScoreTime').innerText = "Czas Najlepszego Wyniku: 0";
+            document.getElementById('tury').innerText = "Tury: 0";
+        });
+
+        window.addEventListener('load', function () {
+            if (localStorage.getItem('highScore') !== null) {
+                document.getElementById('highScore').innerText = "Najlepszy Wynik: " + localStorage.getItem('highScore');
+            }
+            if (localStorage.getItem('highScoreTime') !== null) {
+                document.getElementById('highScoreTime').innerText = "Czas Najlepszego Wyniku: " + localStorage.getItem('highScoreTime');
+            }
+            document.getElementById('tury').innerText = "Tury: 0";
+        });
+    </script>
+</body>
+</html>
+
 </body>
 </html>
