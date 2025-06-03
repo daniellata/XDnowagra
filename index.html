@@ -162,29 +162,31 @@
             var gridX2 = Math.min(Math.floor((player.x + player.size) / 20), 39);
             var gridY2 = Math.min(Math.floor((player.y + player.size) / 20), 29);
 
-            if (map[gridX1][gridY1] === 2 || map[gridX2][gridY1] === 2 || map[gridX1][gridY2] === 2 || map[gridX2][gridY2] === 2) {
-                if (map[gridX1][gridY1] === 2) map[gridX1][gridY1] = 0; // Remove blue square
-                if (map[gridX2][gridY1] === 2) map[gridX2][gridY1] = 0; // Remove blue square
-                if (map[gridX1][gridY2] === 2) map[gridX1][gridY2] = 0; // Remove blue square
-                if (map[gridX2][gridY2] === 2) map[gridX2][gridY2] = 0; // Remove blue square
+            var removedBlue = 0;
+            if (map[gridX1][gridY1] === 2) { map[gridX1][gridY1] = 0; removedBlue++; }
+            if (map[gridX2][gridY1] === 2) { map[gridX2][gridY1] = 0; removedBlue++; }
+            if (map[gridX1][gridY2] === 2) { map[gridX1][gridY2] = 0; removedBlue++; }
+            if (map[gridX2][gridY2] === 2) { map[gridX2][gridY2] = 0; removedBlue++; }
+            if (removedBlue > 0) {
                 score++; // Increase score
-                blueSquareCount--; // Decrease the number of blue squares
+                blueSquareCount -= removedBlue; // Decrease by actual removed count
                 document.getElementById('score').innerText = "Wynik: " + score; // Display the score
             }
 
             // Checking if the player has collected the green square
-            if (map[gridX1][gridY1] === 3 || map[gridX2][gridY1] === 3 || map[gridX1][gridY2] === 3 || map[gridX2][gridY2] === 3) {
-                if (map[gridX1][gridY1] === 3) map[gridX1][gridY1] = 0; // Remove green square
-                if (map[gridX2][gridY1] === 3) map[gridX2][gridY1] = 0; // Remove green square
-                if (map[gridX1][gridY2] === 3) map[gridX1][gridY2] = 0; // Remove green square
-                if (map[gridX2][gridY2] === 3) map[gridX2][gridY2] = 0; // Remove green square
+            var removedGreen = 0;
+            if (map[gridX1][gridY1] === 3) { map[gridX1][gridY1] = 0; removedGreen++; }
+            if (map[gridX2][gridY1] === 3) { map[gridX2][gridY1] = 0; removedGreen++; }
+            if (map[gridX1][gridY2] === 3) { map[gridX1][gridY2] = 0; removedGreen++; }
+            if (map[gridX2][gridY2] === 3) { map[gridX2][gridY2] = 0; removedGreen++; }
+            if (removedGreen > 0) {
                 player.speed = 5; // Increase player speed after collecting the green square
                 setTimeout(function () {
                     if (gameIsActive) { // Check if the game is still active
                         player.speed = 3; // Return to normal speed after 5 seconds
                     }
                 }, 5000); // Duration of the speed boost
-                greenSquareCount--; // Decrease the number of green squares
+                greenSquareCount -= removedGreen; // Decrease by actual removed count
             }
 
             if (blueSquareCount === 0 && greenSquareCount === 0) {
